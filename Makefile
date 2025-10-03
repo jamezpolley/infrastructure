@@ -1,7 +1,8 @@
-.PHONY: venv roles production ALL dev letsencrypt check-rtk
+.PHONY: venv production ALL dev letsencrypt check-rtk ansible
 
-ALL: venv roles
+ALL: .keybase venv roles
 dev: venv roles .vagrant
+ansible: ALL
 
 .keybase:
 	ln -sf $(shell keybase config get -d -b mountdir) .keybase
@@ -21,35 +22,36 @@ venv: .venv/bin/activate
 collections:
 	.venv/bin/ansible-galaxy collection install -r roles/requirements.yml
 
-roles/external: venv collections roles/requirements.yml
+roles/external: collections roles/requirements.yml
 	.venv/bin/ansible-galaxy install -r roles/requirements.yml -p roles/external
+	touch roles/external
 
 roles: roles/external
 
-production: .keybase venv roles
+production: ansible
 	.venv/bin/ansible-playbook site.yml
 
-letsencrypt: venv roles
+letsencrypt: ansible
 	.venv/bin/ansible-playbook update-ssl-certs.yml
 
 #Just updates the SSH keys for the deploy user on all hosts.
-ssh: venv roles
+ssh: ansible
 	.venv/bin/ansible-playbook deploy_user.yml
 
-retry: venv roles site.retry
+retry: ansible site.retry
 	.venv/bin/ansible-playbook site.yml -l @site.retry
 
 clean:
-	rm -rf .venv roles/external site.retry collections
+	rm -rf .venv roles/external site.retry collections .keybase
 	./bin/hermit clean -a
 	
 clean-all: clean
 	rm -rf .vagrant
 
-check-righttoknow:
+check-righttoknow: ansible
 	.venv/bin/ansible-playbook -i ./inventory/ec2-hosts site.yml -l righttoknow --check
-check-planningalerts:
+check-planningalerts: ansible
 	.venv/bin/ansible-playbook -i ./inventory/ec2-hosts site.yml -l planningalerts --check
 
-update-github-ssh-keys:
+update-github-ssh-keys: ansible
 	.venv/bin/ansible-playbook site.yml --tags userkeys
