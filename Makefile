@@ -12,7 +12,7 @@ ALL: venv roles .vagrant
 venv: .venv/bin/activate
 
 .venv/bin/activate: requirements.txt
-	test -d .venv || python3 -m virtualenv .venv
+	test -d .venv || python3 -m venv .venv
 	.venv/bin/pip install --upgrade pip virtualenv
 	.venv/bin/pip install -Ur requirements.txt
 	touch .venv/bin/activate
